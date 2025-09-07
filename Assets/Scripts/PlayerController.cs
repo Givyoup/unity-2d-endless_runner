@@ -1,105 +1,95 @@
 using UnityEngine;
 
-public class PlayerController : MonoBehaviour
+public class PlayerController2D : MonoBehaviour
 {
-    // Animator component reference
-    private Animator animator; 
-    // CharacterController component reference
-    private CharacterController character;
+    private Animator animator;
+    private Rigidbody2D rb;
 
-    // Movement direction vector
-    private Vector3 direction;
+    public float jumpForce = 12f;
+    private bool isGrounded = true;
 
-    [Space(10)]
-    // Gravitational force applied to the player and force for jumping
-    public float gravity = 9.81f * 2f;
-    public float jumpForce = 8f;
+    public BoxCollider2D colliderRun;
+    public BoxCollider2D colliderSlide;
 
-    // Called when the script instance is being loaded
+    private bool isSliding = false;
+
     private void Awake()
     {
-        // Assign necessary components on script initialization
         animator = GetComponent<Animator>();
-        character = GetComponent<CharacterController>();
+        rb = GetComponent<Rigidbody2D>();
     }
 
-    // Called when the object becomes enabled and active
-    private void OnEnable()
-    {
-        // Reset movement direction when player becomes active
-        direction = Vector3.zero;
-    }
-
-    // Called every frame
     private void Update()
     {
-        // Check for Esc key press to quit the game
-        if (Input.GetKeyDown(KeyCode.Escape))
-        {
-            QuitGame();
-            return;  // Stop further processing in Update() if the game is quitting
-        }
-
-        // Apply gravity to the player's vertical movement
-        direction += Vector3.down * gravity * Time.deltaTime;
-
-        // Check if the game is not over to allow player input
-        if (!GameManager.Instance.isGameOver)
-        {
-            // Check if player is grounded
-            if (character.isGrounded)
-            {
-                // Reset vertical movement when grounded and set up animation
-                direction = Vector3.down;
-                animator.SetBool("isGrounded", true);
-
-                // Check for jump input
-                if (Input.GetKeyDown(KeyCode.Space))
-                {
-                    // Apply upward force for jumping and set up animation
-                    direction = Vector3.up * jumpForce;
-                    animator.SetBool("isGrounded", false);
-                }
-            }
-        }
-
-         // Check if the game is over
-        if (GameManager.Instance.isGameOver)
-        {
+        if (GameManager.Instance.isGameOver) {
             if (Input.GetKeyDown(KeyCode.R))
             {
-                // Call the NewGame method to initialize the game
                 GameManager.Instance.NewGame();
             }
         }
 
-        // Move the character based on the calculated direction
-        character.Move(direction * Time.deltaTime);
-    }
-
-    // Triggered when colliding with other colliders
-    private void OnTriggerEnter(Collider other)
-    {
-        // Check if the collider is tagged as an obstacle
-        if (other.CompareTag("Obstacle"))
+        // --- JUMP ---
+        if (Input.GetKeyDown(KeyCode.Space) && isGrounded && !isSliding)
         {
-            // Trigger the GameOver method in the GameManager
-            GameManager.Instance.GameOver();
+            rb.linearVelocity = Vector2.up * jumpForce;
+            isGrounded = false;
+            animator.SetBool("isJump", true);
+
+            // 🔊 Mainkan sound jump
+            SoundManager.Instance.Play("jump");
+        }
+
+        // --- SLIDE ---
+        if ((Input.GetKey(KeyCode.S) || Input.GetKey(KeyCode.DownArrow)) && isGrounded)
+        {
+            if (!isSliding)
+            {
+                isSliding = true;
+                colliderRun.enabled = false;
+                colliderSlide.enabled = true;
+                animator.SetBool("isSliding", true);
+
+                // 🔊 Mainkan sound slide
+                SoundManager.Instance.Play("slide");
+            }
+        }
+        else if (isSliding && isGrounded)
+        {
+            isSliding = false;
+            colliderRun.enabled = true;
+            colliderSlide.enabled = false;
+            animator.SetBool("isSliding", false);
         }
     }
 
-    // Method to quit the game
-    private void QuitGame()
+    private void OnCollisionEnter2D(Collision2D collision)
     {
-        // In a standalone build, this will close the game
-        // Note: In the editor, this will stop play mode
-        #if UNITY_STANDALONE
-        Application.Quit();
-        #endif
+        if (collision.gameObject.CompareTag("Ground"))
+        {
+            isGrounded = true;
+            animator.SetBool("isGrounded", true);
+            animator.SetBool("isJump", false);
+        }
+    }
 
-        // In the editor, this will stop play mode
-        #if UNITY_EDITOR
-        UnityEditor.EditorApplication.isPlaying = false;
-        #endif
+    private void OnCollisionExit2D(Collision2D collision)
+    {
+        if (collision.gameObject.CompareTag("Ground"))
+        {
+            isGrounded = false;
+            animator.SetBool("isGrounded", false);
+        }
+    }
+
+    private void OnTriggerEnter2D(Collider2D other)
+    {
+        if (other.CompareTag("Obstacle"))
+        {
+            GameManager.Instance.GameOver();
+            animator.SetBool("isGameOver", true);
+
+            // 🔊 Mainkan sound death
+            SoundManager.Instance.Play("death");
+        }
     }
 }

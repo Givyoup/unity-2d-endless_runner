@@ -27,13 +27,13 @@ public class GameManager : MonoBehaviour
     public TextMeshProUGUI hiscoreText;
 
     // Reference to the PlayerController and the ObstacleGenerator
-    private PlayerController player;
+    private PlayerController2D player;
     private ObstacleGenerator spawner;
 
     [Space(10)]
     // Initial game speed and the rate at which it increases
     public float initialGameSpeed = 5f;
-    public float gameSpeedIncrease = 0.1f;
+    public float gameSpeedIncrease = 2f;
 
     // Current game speed
     public float gameSpeed { get; private set; }
@@ -76,7 +76,7 @@ public class GameManager : MonoBehaviour
         Cursor.visible = false;
 
         // Find and store references to the PlayerController and ObstacleGenerator
-        player = FindObjectOfType<PlayerController>();
+        player = FindObjectOfType<PlayerController2D>();
         spawner = FindObjectOfType<ObstacleGenerator>();
 
         // Initialize the "isGameStarted" animator parameter to false.
